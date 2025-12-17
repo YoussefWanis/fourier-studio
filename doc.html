@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fourier Studio v2.0 Pro - Interactive Documentation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    
+    <!-- Chosen Palette: Dark Mode Tech (Slate/Cyan/Purple) based on the Fourier Studio source code aesthetic -->
+    <!-- Application Structure Plan:
+        1. Header: Branding and Navigation.
+        2. Hero Section: High-level overview of Fourier Studio.
+        3. Tech Stack Dashboard: Interactive charts showing the composition of the project.
+        4. Architecture & Data Flow (The Core): A vertical interactive stepper. Clicking a step reveals the detailed logic/code flow from the report.
+        5. Mixing Logic Explorer: Interactive toggle to explain the math (Mag/Phase vs Real/Imag).
+        6. API Reference: Tabbed interface to explore endpoints.
+        7. Footer.
+    -->
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            850: '#151f32',
+                            900: '#0f172a',
+                            950: '#020617',
+                        },
+                        cyan: {
+                            450: '#14b8a6',
+                        },
+                        purple: {
+                            450: '#a855f7',
+                        }
+                    },
+                    fontFamily: {
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', 'monospace'],
+                        sans: ['ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0f172a; /* Slate 900 */
+            color: #e2e8f0; /* Slate 200 */
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            height: 300px;
+            margin: 0 auto;
+        }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        .step-connector::after {
+            content: '';
+            position: absolute;
+            top: 2rem;
+            left: 11px; /* Center of dot */
+            width: 2px;
+            height: calc(100% - 1.5rem);
+            background-color: #334155;
+            z-index: 0;
+        }
+        .step-connector:last-child::after {
+            display: none;
+        }
+        .nav-active {
+            border-bottom: 2px solid #22d3ee;
+            color: #22d3ee;
+        }
+        /* Custom scrollbar for code blocks */
+        .code-scroll::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
+        }
+        .code-scroll::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        .code-scroll::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+        .math-toggle.active {
+            border-color: #22d3ee;
+            background: rgba(34, 211, 238, 0.1);
+        }
+    </style>
+</head>
+<body class="font-sans antialiased selection:bg-cyan-500/30">
+
+    <!-- Header -->
+    <nav class="sticky top-0 z-50 border-b border-slate-800 bg-slate-950/80 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-gradient-to-tr from-cyan-500 to-purple-600 rounded flex items-center justify-center font-bold text-white text-sm">FS</div>
+                    <span class="font-bold text-lg tracking-tight bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">FOURIER STUDIO <span class="text-[10px] text-slate-500 font-mono">DOCS</span></span>
+                </div>
+                <div class="hidden md:block">
+                    <div class="flex items-baseline space-x-4">
+                        <button onclick="scrollToSection('overview')" class="text-slate-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Overview</button>
+                        <button onclick="scrollToSection('architecture')" class="text-slate-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Architecture Flow</button>
+                        <button onclick="scrollToSection('logic')" class="text-slate-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Core Logic</button>
+                        <button onclick="scrollToSection('api')" class="text-slate-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">API</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-20">
+
+        <!-- Section 1: Hero & Features -->
+        <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+        <section id="overview" class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div class="space-y-6 animate-fade-in-up">
+                <div class="inline-flex items-center px-3 py-1 rounded-full border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 text-xs font-mono">
+                    v2.0 Pro Release
+                </div>
+                <h1 class="text-4xl md:text-5xl font-bold leading-tight text-white">
+                    Explore Images in the <br>
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500">Frequency Domain</span>
+                </h1>
+                <p class="text-lg text-slate-400 leading-relaxed">
+                    Fourier Studio is a sophisticated hybrid application for mixing image components via Fast Fourier Transform (FFT). Combine the structure of one image with the texture of another in real-time using advanced region filtering.
+                </p>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
+                    <div class="glass-panel p-4 rounded-xl border-l-4 border-cyan-500">
+                        <h3 class="font-bold text-white mb-1">Dual Mixing Modes</h3>
+                        <p class="text-sm text-slate-400">Magnitude/Phase & Real/Imaginary linear combinations.</p>
+                    </div>
+                    <div class="glass-panel p-4 rounded-xl border-l-4 border-purple-500">
+                        <h3 class="font-bold text-white mb-1">Region Filtering</h3>
+                        <p class="text-sm text-slate-400">Interactive Inner/Outer frequency masking.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visualization: Tech Stack -->
+            <!-- Visualization & Content Choices: 
+                 Goal: Show the "Tech Stack" composition clearly.
+                 Method: Doughnut Chart (Chart.js).
+                 Justification: Visually separates Frontend vs Backend technologies as described in the report.
+            -->
+            <div class="glass-panel rounded-2xl p-6 relative flex flex-col items-center">
+                <h3 class="text-lg font-bold text-white mb-4 w-full text-left border-b border-slate-700 pb-2">Technology Stack</h3>
+                <div class="chart-container">
+                    <canvas id="techStackChart"></canvas>
+                </div>
+                <div class="mt-6 grid grid-cols-2 gap-8 text-center w-full">
+                    <div>
+                        <div class="text-2xl font-bold text-cyan-400">Frontend</div>
+                        <div class="text-xs text-slate-500 font-mono mt-1">React • Tailwind • Lucide</div>
+                    </div>
+                    <div>
+                        <div class="text-2xl font-bold text-purple-400">Backend</div>
+                        <div class="text-xs text-slate-500 font-mono mt-1">Flask • OpenCV • NumPy</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Architecture & Data Flow (Interactive) -->
+        <!-- Visualization & Content Choices: 
+             Goal: Explain the "System Architecture & Data Flow" section of the report.
+             Method: A vertical interactive stepper.
+             Interaction: Clicking a step updates the "Detail View" on the right.
+             Justification: The report describes a sequential process (Upload -> Process -> Mix -> Display). A stepper mimics this flow naturally.
+        -->
+        <section id="architecture">
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-white mb-2">System Architecture & Data Flow</h2>
+                <p class="text-slate-400">Interactive pipeline tracing the lifecycle of an image from user upload to final reconstruction.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                
+                <!-- Left: Stepper Controls -->
+                <div class="lg:col-span-5 space-y-0 relative">
+                    <!-- Step 1 -->
+                    <div class="step-connector relative pb-8 pl-8 cursor-pointer group" onclick="setFlowStep(1)">
+                        <div id="step-dot-1" class="absolute left-0 top-1 w-6 h-6 rounded-full bg-cyan-500 border-4 border-slate-900 z-10 shadow-[0_0_15px_rgba(6,182,212,0.5)] transition-all"></div>
+                        <h3 class="text-lg font-bold text-white group-hover:text-cyan-400 transition-colors">1. Entry & Upload</h3>
+                        <p class="text-sm text-slate-500">React Frontend & Local Preview</p>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="step-connector relative pb-8 pl-8 cursor-pointer group" onclick="setFlowStep(2)">
+                        <div id="step-dot-2" class="absolute left-0 top-1 w-6 h-6 rounded-full bg-slate-700 border-4 border-slate-900 z-10 transition-all"></div>
+                        <h3 class="text-lg font-bold text-white group-hover:text-cyan-400 transition-colors">2. Async Ingestion</h3>
+                        <p class="text-sm text-slate-500">Flask Server & Worker Threads</p>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="step-connector relative pb-8 pl-8 cursor-pointer group" onclick="setFlowStep(3)">
+                        <div id="step-dot-3" class="absolute left-0 top-1 w-6 h-6 rounded-full bg-slate-700 border-4 border-slate-900 z-10 transition-all"></div>
+                        <h3 class="text-lg font-bold text-white group-hover:text-cyan-400 transition-colors">3. The Mixer Loop</h3>
+                        <p class="text-sm text-slate-500">State Throttling & Payload Construction</p>
+                    </div>
+
+                    <!-- Step 4 -->
+                    <div class="step-connector relative pb-8 pl-8 cursor-pointer group" onclick="setFlowStep(4)">
+                        <div id="step-dot-4" class="absolute left-0 top-1 w-6 h-6 rounded-full bg-slate-700 border-4 border-slate-900 z-10 transition-all"></div>
+                        <h3 class="text-lg font-bold text-white group-hover:text-cyan-400 transition-colors">4. Backend Execution</h3>
+                        <p class="text-sm text-slate-500">FFT Math & Masking (NumPy)</p>
+                    </div>
+
+                    <!-- Step 5 -->
+                    <div class="relative pl-8 cursor-pointer group" onclick="setFlowStep(5)">
+                        <div id="step-dot-5" class="absolute left-0 top-1 w-6 h-6 rounded-full bg-slate-700 border-4 border-slate-900 z-10 transition-all"></div>
+                        <h3 class="text-lg font-bold text-white group-hover:text-cyan-400 transition-colors">5. Output Polling</h3>
+                        <p class="text-sm text-slate-500">Result Reconstruction & Display</p>
+                    </div>
+                </div>
+
+                <!-- Right: Detail View -->
+                <div class="lg:col-span-7">
+                    <div class="glass-panel rounded-xl p-1 h-full min-h-[450px] shadow-2xl">
+                        <div class="bg-slate-900/50 rounded-lg h-full p-6 border border-slate-800" id="flow-content-area">
+                            <!-- Content injected via JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Core Logic (Math) -->
+        <!-- Visualization & Content Choices:
+             Goal: Simplify the complex math described in "Core Logic & Algorithms".
+             Method: Toggle cards (Mag/Phase vs Real/Imag) + Interactive Mask Demo.
+             Justification: Allows user to focus on one formula at a time. The mask demo visualizes the "Region Filtering" concept without needing actual image data.
+        -->
+        <section id="logic">
+            <div class="text-center mb-10">
+                <h2 class="text-3xl font-bold text-white">The Math Behind the Magic</h2>
+                <p class="text-slate-400 mt-2">How Fourier Studio combines images in the frequency domain.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Mag/Phase Card -->
+                <div class="glass-panel p-6 rounded-xl border border-slate-700 hover:border-cyan-500/50 transition-all cursor-pointer group math-toggle active" id="math-card-mag" onclick="toggleMath('mag')">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-bold text-cyan-400">Magnitude / Phase Mode</h3>
+                        <div class="w-3 h-3 rounded-full bg-cyan-500 shadow-[0_0_10px_#06b6d4]"></div>
+                    </div>
+                    <p class="text-sm text-slate-300 mb-4 min-h-[40px]">Combines the structure (Phase) of one set of images with the texture/contrast (Magnitude) of another.</p>
+                    <div class="bg-slate-950 p-4 rounded font-mono text-xs text-slate-400 overflow-x-auto border border-slate-800">
+                        New = (Σ w_mag · |F|) · e^(j · (Σ w_phase · ∠F))
+                    </div>
+                </div>
+
+                <!-- Real/Imag Card -->
+                <div class="glass-panel p-6 rounded-xl border border-slate-700 hover:border-purple-500/50 transition-all cursor-pointer group math-toggle" id="math-card-real" onclick="toggleMath('real')">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-bold text-purple-400">Real / Imaginary Mode</h3>
+                        <div class="w-3 h-3 rounded-full bg-purple-500 shadow-[0_0_10px_#a855f7]"></div>
+                    </div>
+                    <p class="text-sm text-slate-300 mb-4 min-h-[40px]">A linear combination of the complex components. Useful for abstract artistic blending.</p>
+                    <div class="bg-slate-950 p-4 rounded font-mono text-xs text-slate-400 overflow-x-auto border border-slate-800">
+                        New = (Σ w_real · Re(F)) + j · (Σ w_imag · Im(F))
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visualization: Region Masking Diagram (CSS Only) -->
+            <div class="mt-12 glass-panel p-8 rounded-xl border-t border-slate-700">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                    <div>
+                        <h3 class="text-2xl font-bold text-white mb-2">Region Masking Logic</h3>
+                        <p class="text-slate-400 mb-4">
+                            To filter specific frequencies, the system generates a binary mask based on the UI selection.
+                        </p>
+                        <ul class="space-y-3 text-sm text-slate-300">
+                            <li class="flex items-center gap-2"><span class="w-2 h-2 bg-green-500 rounded-full shadow-[0_0_5px_#22c55e]"></span> <b>Inner Pass:</b> Keeps center frequencies (Low Pass filter effect).</li>
+                            <li class="flex items-center gap-2"><span class="w-2 h-2 bg-red-500 rounded-full shadow-[0_0_5px_#ef4444]"></span> <b>Outer Reject:</b> Keeps edge frequencies (High Pass filter effect).</li>
+                        </ul>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <div class="relative w-64 h-64 bg-black rounded border border-slate-700 flex items-center justify-center overflow-hidden shadow-2xl">
+                            <!-- Grid Background -->
+                            <div class="absolute inset-0 opacity-20" style="background-image: radial-gradient(#475569 1px, transparent 1px); background-size: 20px 20px;"></div>
+                            
+                            <!-- The Mask visualization -->
+                            <div id="mask-demo" class="relative w-32 h-32 border-2 border-cyan-400 bg-cyan-400/20 backdrop-blur-sm transition-all duration-300 flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.2)]">
+                                <span class="text-cyan-200 text-xs font-mono font-bold tracking-widest">PASSED</span>
+                            </div>
+                            <div class="absolute bottom-2 right-2 text-[10px] font-mono text-slate-500">512x512 FFT SPACE</div>
+                        </div>
+                        
+                        <!-- Interactive Slider for Mask Demo -->
+                        <div class="mt-4 w-64">
+                            <label class="flex justify-between text-xs font-mono text-slate-500 mb-1">
+                                <span>REGION SIZE</span>
+                                <span id="mask-val-display" class="text-cyan-400">50%</span>
+                            </label>
+                            <input type="range" min="10" max="90" value="50" class="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500" oninput="updateMaskDemo(this.value)">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: API Explorer -->
+        <!-- Visualization & Content Choices:
+             Goal: Allow developers to explore the "API Reference" without setting up the backend.
+             Method: Tabbed interface simulating Request/Response cycles.
+             Justification: Provides hands-on understanding of the JSON structure defined in the report.
+        -->
+        <section id="api" class="pb-20">
+            <h2 class="text-3xl font-bold text-white mb-6">API Reference Explorer</h2>
+            
+            <div class="glass-panel rounded-xl overflow-hidden flex flex-col md:flex-row min-h-[500px] border border-slate-800">
+                <!-- Sidebar -->
+                <div class="w-full md:w-1/4 bg-slate-900 border-r border-slate-800 p-2 space-y-1">
+                    <div class="px-4 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Endpoints</div>
+                    <button onclick="showEndpoint('upload')" class="w-full text-left px-4 py-3 rounded text-sm font-mono text-slate-400 hover:bg-slate-800 hover:text-cyan-400 transition-colors focus:bg-slate-800 focus:text-cyan-400 active-endpoint" id="btn-upload">
+                        <span class="text-purple-400 font-bold mr-2">POST</span> /upload
+                    </button>
+                    <button onclick="showEndpoint('mix')" class="w-full text-left px-4 py-3 rounded text-sm font-mono text-slate-400 hover:bg-slate-800 hover:text-cyan-400 transition-colors focus:bg-slate-800 focus:text-cyan-400" id="btn-mix">
+                        <span class="text-purple-400 font-bold mr-2">POST</span> /start_mix
+                    </button>
+                    <button onclick="showEndpoint('view')" class="w-full text-left px-4 py-3 rounded text-sm font-mono text-slate-400 hover:bg-slate-800 hover:text-cyan-400 transition-colors focus:bg-slate-800 focus:text-cyan-400" id="btn-view">
+                        <span class="text-green-400 font-bold mr-2">GET</span> /get_view
+                    </button>
+                    <button onclick="showEndpoint('progress')" class="w-full text-left px-4 py-3 rounded text-sm font-mono text-slate-400 hover:bg-slate-800 hover:text-cyan-400 transition-colors focus:bg-slate-800 focus:text-cyan-400" id="btn-progress">
+                        <span class="text-green-400 font-bold mr-2">GET</span> /progress
+                    </button>
+                </div>
+
+                <!-- Content -->
+                <div class="flex-1 p-6 bg-slate-950 relative">
+                    <div id="api-content" class="h-full flex flex-col">
+                        <!-- Content injected via JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800 bg-slate-950 py-12 text-center">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="w-10 h-10 bg-slate-800 rounded mx-auto mb-4 flex items-center justify-center text-cyan-500 font-bold text-lg">FS</div>
+            <p class="text-slate-500 text-sm">&copy; 2025 Fourier Studio Project. Interactive Documentation built from Source Report.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- 1. Charts ---
+        // CONFIRMATION: NO SVG graphics used. NO Mermaid JS used.
+        // Using Chart.js for Tech Stack visualization
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('techStackChart').getContext('2d');
+            
+            // Tech Stack Data from README
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['React/JS (Frontend)', 'Python/Flask (Backend)', 'Processing (NumPy/CV2)'],
+                    datasets: [{
+                        data: [40, 25, 35],
+                        backgroundColor: ['#22d3ee', '#a855f7', '#64748b'],
+                        borderWidth: 0,
+                        hoverOffset: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { 
+                                color: '#94a3b8', 
+                                padding: 20,
+                                font: { family: 'ui-monospace' },
+                                usePointStyle: true
+                            }
+                        }
+                    },
+                    cutout: '75%',
+                    animation: {
+                        animateScale: true,
+                        animateRotate: true
+                    }
+                }
+            });
+
+            // Initialize flow
+            setFlowStep(1);
+            
+            // Initialize API
+            showEndpoint('mix');
+        });
+
+        // --- 2. Architecture Flow Data ---
+        // Data derived from "System Architecture & Data Flow" section of README
+        const flowData = {
+            1: {
+                title: "1. Entry Points & Frontend",
+                desc: "The app initializes in <code>main.jsx</code> and mounts the <code>App.jsx</code> component.",
+                details: [
+                    "Browser loads index.html",
+                    "React mounts <code>&lt;App /&gt;</code>",
+                    "UI renders 4 <code>ImageViewport</code> components",
+                    "User clicks 'Upload' -> triggers <code>handleUpload</code>"
+                ],
+                code: `// App.jsx
+const handleUpload = async (id, file) => {
+  // 1. Instant Feedback
+  const localUrl = URL.createObjectURL(file);
+  setImages(...); 
+
+  // 2. Async Upload
+  const formData = new FormData();
+  formData.append('image', file);
+  await fetch(\`\${API_URL}/upload/\${id}\`, ...);
+};`
+            },
+            2: {
+                title: "2. Backend Ingestion",
+                desc: "Flask receives the file but avoids blocking the main thread.",
+                details: [
+                    "Flask endpoint <code>/upload/&lt;id&gt;</code> receives file",
+                    "Creates <code>ImageModel</code> instance",
+                    "<strong>Optimization:</strong> Pushes task to <code>fft_queue</code>",
+                    "Worker thread computes FFT (512x512) in background"
+                ],
+                code: `// app.py
+def fft_worker():
+    while True:
+        item = fft_queue.get()
+        # Heavy computation happens here
+        img_obj._compute_fft() 
+        fft_queue.task_done()`
+            },
+            3: {
+                title: "3. Mixer Interaction Loop",
+                desc: "The frontend throttles user input to prevent server overload.",
+                details: [
+                    "User moves slider in <code>MixerControls.jsx</code>",
+                    "Updates React state (<code>weights</code>)",
+                    "<code>useEffect</code> waits for 400ms debounce",
+                    "Calls <code>handleProcess</code> to build JSON payload"
+                ],
+                code: `// App.jsx
+useEffect(() => {
+    const timer = setTimeout(() => {
+        handleProcess();
+    }, 400); // Debounce
+    return () => clearTimeout(timer);
+}, [weights, regionSettings...]);`
+            },
+            4: {
+                title: "4. Backend Math Execution",
+                desc: "The core mathematical operations performed by NumPy.",
+                details: [
+                    "Server spawns thread for <code>run_mixing_task</code>",
+                    "Retrieves pre-computed FFT data",
+                    "Calculates weighted sum of Mag/Phase or Real/Imag",
+                    "Applies binary region mask",
+                    "Performs Inverse FFT (IFFT) to get spatial image"
+                ],
+                code: `// app.py (Simplified)
+ft_mix = (w1*mag1 + w2*mag2) * np.exp(1j * (w1*pha1 + ...))
+
+// Apply Mask
+ft_mix *= region_mask
+
+// Inverse Transform
+result = np.real(np.fft.ifft2(ft_mix))`
+            },
+            5: {
+                title: "5. Output & Polling",
+                desc: "Getting the result back to the user.",
+                details: [
+                    "Frontend polls <code>GET /progress</code> every 500ms",
+                    "Backend returns Base64 PNG string when status is 'completed'",
+                    "React updates <code>outputs</code> state",
+                    "<code>OutputViewport</code> renders the new image"
+                ],
+                code: `// App.jsx
+const pollProgress = async () => {
+    const res = await fetch(\`\${API_URL}/progress\`);
+    const data = await res.json();
+    if (data.status === 'completed') {
+        setOutputs(prev => ({...prev, [active]: data.result}));
+        clearInterval(pollingRef.current);
+    }
+};`
+            }
+        };
+
+        function setFlowStep(step) {
+            // Update UI Dots
+            for(let i=1; i<=5; i++) {
+                const dot = document.getElementById(`step-dot-${i}`);
+                if (i === step) {
+                    dot.classList.remove('bg-slate-700');
+                    dot.classList.add('bg-cyan-500', 'shadow-[0_0_15px_rgba(6,182,212,0.5)]');
+                } else {
+                    dot.classList.add('bg-slate-700');
+                    dot.classList.remove('bg-cyan-500', 'shadow-[0_0_15px_rgba(6,182,212,0.5)]');
+                }
+            }
+
+            // Update Content
+            const data = flowData[step];
+            const container = document.getElementById('flow-content-area');
+            
+            let listHtml = data.details.map(item => `<li class="flex items-start gap-2"><span class="text-cyan-500 mt-1">▸</span> <span>${item}</span></li>`).join('');
+
+            container.innerHTML = `
+                <div class="h-full flex flex-col animate-fade-in">
+                    <div class="mb-4 border-b border-slate-800 pb-4">
+                        <span class="text-xs font-mono text-cyan-500">STEP 0${step}</span>
+                        <h3 class="text-2xl font-bold text-white mt-1">${data.title}</h3>
+                        <p class="text-slate-400 text-sm mt-2">${data.desc}</p>
+                    </div>
+                    <div class="grid grid-cols-1 gap-6 flex-1">
+                        <div>
+                            <h4 class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-3">Process Details</h4>
+                            <ul class="space-y-3 text-sm text-slate-300">
+                                ${listHtml}
+                            </ul>
+                        </div>
+                        <div class="bg-slate-950 rounded-lg p-4 border border-slate-800 overflow-hidden flex flex-col h-full max-h-48 relative group">
+                             <div class="absolute top-2 right-2 text-[10px] text-slate-600 font-mono">CODE PREVIEW</div>
+                             <pre class="flex-1 overflow-auto code-scroll text-[10px] sm:text-xs font-mono text-cyan-100/90 leading-relaxed"><code>${data.code}</code></pre>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- 3. Mask Visualization Logic ---
+        function updateMaskDemo(val) {
+            const box = document.getElementById('mask-demo');
+            const display = document.getElementById('mask-val-display');
+            
+            display.innerText = `${val}%`;
+            
+            // Visual scale mapping: 256px container = 100%
+            const size = (val / 100) * 256; 
+            
+            box.style.width = `${val}%`;
+            box.style.height = `${val}%`;
+        }
+
+        function toggleMath(mode) {
+            // UI Toggle
+            document.querySelectorAll('.math-toggle').forEach(el => {
+                el.classList.remove('active', 'border-cyan-500', 'bg-cyan-500/10');
+                el.classList.add('border-slate-700');
+            });
+            
+            const activeCard = document.getElementById(`math-card-${mode}`);
+            activeCard.classList.add('active');
+            activeCard.classList.remove('border-slate-700');
+        }
+
+        // --- 4. API Explorer Logic ---
+        const apiData = {
+            'upload': {
+                method: 'POST',
+                url: '/upload/<slot_id>',
+                desc: 'Uploads an image to one of the 4 slots. Computes initial FFT asynchronously.',
+                payload: 'FormData: { "image": File }',
+                response: '200 OK: { "status": "success", "dims": [1024, 1024] }'
+            },
+            'mix': {
+                method: 'POST',
+                url: '/start_mix',
+                desc: 'Triggers a mixing task with the specified weights and region configuration.',
+                payload: `{
+  "mix_mode": "mag_phase",
+  "mag_weights": { "1": 70, "2": 0, "3": 0, "4": 0 },
+  "phase_weights": { "1": 0, "2": 100, "3": 0, "4": 0 },
+  "region": { 
+      "width": 50, "height": 50, 
+      "type": "inner", "x": 50, "y": 50 
+  }
+}`,
+                response: '200 OK: { "task_id": 142 }'
+            },
+            'view': {
+                method: 'GET',
+                url: '/get_view/<slot_id>/<component>',
+                desc: 'Returns a Base64 image of a specific FFT component (Mag, Phase, Real, Imag).',
+                payload: 'None',
+                response: '200 OK: { "image": "iVBORw0KGgoAAAANSUhEUg..." }'
+            },
+            'progress': {
+                method: 'GET',
+                url: '/progress',
+                desc: 'Polls the current status of the background mixing thread.',
+                payload: 'None',
+                response: `{ 
+  "status": "completed", 
+  "progress": 100, 
+  "result": "base64_string..." 
+}`
+            }
+        };
+
+        function showEndpoint(key) {
+            // Update buttons
+            ['upload', 'mix', 'view', 'progress'].forEach(k => {
+                const btn = document.getElementById(`btn-${k}`);
+                if (k === key) {
+                    btn.classList.add('bg-slate-800', 'text-cyan-400', 'border-l-2', 'border-cyan-400');
+                    btn.classList.remove('text-slate-400');
+                } else {
+                    btn.classList.remove('bg-slate-800', 'text-cyan-400', 'border-l-2', 'border-cyan-400');
+                    btn.classList.add('text-slate-400');
+                }
+            });
+
+            // Update content
+            const data = apiData[key];
+            const content = document.getElementById('api-content');
+            
+            // Color code method
+            const methodColor = data.method === 'POST' ? 'text-purple-400' : 'text-green-400';
+
+            content.innerHTML = `
+                <div class="flex items-center gap-3 mb-4 border-b border-slate-800 pb-4">
+                    <span class="font-bold text-xl ${methodColor}">${data.method}</span>
+                    <span class="font-mono text-lg text-white">${data.url}</span>
+                </div>
+                <p class="text-slate-400 mb-6 text-sm">${data.desc}</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-wider">Request Payload</span>
+                        <div class="bg-slate-900 p-4 rounded-lg border border-slate-800 flex-1 font-mono text-xs text-cyan-100 overflow-auto code-scroll relative group">
+                            <pre>${data.payload}</pre>
+                        </div>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-wider">Response Example</span>
+                        <div class="bg-slate-900 p-4 rounded-lg border border-slate-800 flex-1 font-mono text-xs text-green-100 overflow-auto code-scroll relative group">
+                            <pre>${data.response}</pre>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- 5. Scroll helper ---
+        function scrollToSection(id) {
+            document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+        }
+
+    </script>
+</body>
+</html>
