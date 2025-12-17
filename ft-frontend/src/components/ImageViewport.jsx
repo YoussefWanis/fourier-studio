@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ImageIcon, ChevronDown, Upload, RefreshCw } from 'lucide-react'; // Ensure Upload is imported
+import { ImageIcon, Upload, RefreshCw, Eye, Activity } from 'lucide-react';
 import { API_URL } from '../config';
 
 const ImageViewport = ({ 
@@ -12,13 +12,15 @@ const ImageViewport = ({
   isBackendActive,
   processingMode 
 }) => {
-  const [viewSelection, setViewSelection] = useState('Magnitude'); 
+  // --- STATE ---
+  const [spatialMode, setSpatialMode] = useState('Original'); // 'Original' | 'Grayscale'
+  const [freqMode, setFreqMode] = useState('Magnitude');      // 'Magnitude' | 'Phase' | 'Real' | 'Imaginary'
+  
   const [ftImageUrl, setFtImageUrl] = useState(null); 
   const [isLoading, setIsLoading] = useState(false);
+  
   const fileInputRef = useRef(null);
-  const containerRef = useRef(null);
-
-  const isFreqMode = !['Original', 'Grayscale'].includes(viewSelection);
+  const freqContainerRef = useRef(null);
 
   // --- TRIGGER UPLOAD ---
   const handleUploadClick = () => {
@@ -27,12 +29,13 @@ const ImageViewport = ({
     }
   };
 
+  // --- FETCH FREQUENCY VIEW ---
   const fetchView = useCallback(async () => {
-    if (!data.hasImage || !isBackendActive || !isFreqMode) return;
+    if (!data.hasImage || !isBackendActive) return;
     
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_URL}/get_view/${id}/${viewSelection}`);
+      const res = await fetch(`${API_URL}/get_view/${id}/${freqMode}`);
       if (!res.ok) throw new Error("Fetch failed");
       const json = await res.json();
       
@@ -44,20 +47,21 @@ const ImageViewport = ({
     } finally {
       setIsLoading(false);
     }
-  }, [id, data.hasImage, viewSelection, isBackendActive, isFreqMode]);
+  }, [id, data.hasImage, freqMode, isBackendActive]);
 
+  // Fetch whenever the frequency mode changes or an image is uploaded
   useEffect(() => {
     if (!data.hasImage) return;
-    if (isBackendActive && isFreqMode) {
+    if (isBackendActive) {
       fetchView();
     }
-  }, [data.hasImage, viewSelection, isBackendActive, isFreqMode, fetchView]);
+  }, [data.hasImage, freqMode, isBackendActive, fetchView]);
 
-  // Handle Dragging
+  // --- DRAG HANDLER (Restricted to Frequency View) ---
   const handleMouseDown = (e) => {
-    if (!data.hasImage || !isFreqMode || processingMode === 'whole') return;
+    if (!data.hasImage || processingMode === 'whole') return;
     
-    const container = containerRef.current;
+    const container = freqContainerRef.current;
     if (!container) return;
     const rect = container.getBoundingClientRect();
     
@@ -80,6 +84,7 @@ const ImageViewport = ({
     window.addEventListener('mouseup', stopDrag);
   };
 
+  // --- OFFLINE PLACEHOLDER ---
   const renderOfflineSpectrum = () => (
     <div 
         className="w-full h-full relative overflow-hidden opacity-80"
@@ -97,95 +102,118 @@ const ImageViewport = ({
   return (
     <div className="bg-slate-800 rounded-xl overflow-hidden border border-slate-700 shadow-xl flex flex-col h-full group hover:border-cyan-500/50 transition-colors">
       
-      {/* --- HEADER --- */}
-      <div className="bg-slate-900/80 p-2 flex items-center justify-between text-xs font-mono border-b border-slate-700">
+      {/* --- HEADER (Global Controls) --- */}
+      <div className="bg-slate-900/80 p-2 flex items-center justify-between text-xs font-mono border-b border-slate-700 shrink-0">
         <span className="text-cyan-400 flex items-center gap-2">
           <ImageIcon size={14} /> IMG_0{id}
         </span>
         
-        {/* Right Side: Upload Button + Dropdown */}
         <div className="flex items-center gap-2">
-            
-            {/* NEW UPLOAD BUTTON */}
             <button 
                 onClick={handleUploadClick}
-                className="bg-slate-800 hover:bg-cyan-600 text-slate-400 hover:text-white p-1 rounded border border-slate-700 transition-colors"
+                className="bg-slate-800 hover:bg-cyan-600 text-slate-400 hover:text-white p-1 rounded border border-slate-700 transition-colors flex items-center gap-1"
                 title="Upload / Change Image"
             >
-                <Upload size={14} />
+                <Upload size={12} /> <span className="hidden sm:inline">UPLOAD</span>
             </button>
-
-            <div className="relative group/sel">
-                <select 
-                    value={viewSelection}
-                    onChange={(e) => setViewSelection(e.target.value)}
-                    className="bg-slate-950 text-xs text-slate-300 border border-slate-700 rounded px-2 py-1 pr-6 outline-none hover:border-cyan-500 hover:text-cyan-400 transition-colors appearance-none cursor-pointer"
-                >
-                    <option value="Original">Original (Color)</option>
-                    <option value="Grayscale">Grayscale Input</option>
-                    <option disabled>──────────</option>
-                    <option value="Magnitude">FT Magnitude</option>
-                    <option value="Phase">FT Phase</option>
-                    <option value="Real">FT Real</option>
-                    <option value="Imaginary">FT Imaginary</option>
-                </select>
-                <ChevronDown size={12} className="absolute right-2 top-1.5 text-slate-500 pointer-events-none" />
-            </div>
         </div>
       </div>
 
-      {/* --- CONTENT --- */}
-      <div 
-        ref={containerRef}
-        className={`relative flex-1 bg-black overflow-hidden flex items-center justify-center ${isFreqMode && processingMode === 'region' ? 'cursor-crosshair' : 'cursor-default'}`}
-        onMouseDown={handleMouseDown}
-      >
+      {/* Hidden File Input */}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        className="hidden" 
+        accept="image/*"
+        onChange={(e) => e.target.files[0] && onUpload(id, e.target.files[0])}
+      />
+
+      {/* --- CONTENT AREA (Split View) --- */}
+      <div className="flex-1 flex flex-col min-h-0">
         
-        {/* Hidden File Input */}
-        <input 
-          type="file" 
-          ref={fileInputRef} 
-          className="hidden" 
-          accept="image/*"
-          onChange={(e) => e.target.files[0] && onUpload(id, e.target.files[0])}
-        />
+        {/* 1. SPATIAL DOMAIN (Top Half) */}
+        <div className="flex-1 relative border-b border-slate-700 bg-black/50 overflow-hidden">
+             {/* Floating Controls */}
+             <div className="absolute top-2 right-2 z-10">
+                <select 
+                    value={spatialMode}
+                    onChange={(e) => setSpatialMode(e.target.value)}
+                    className="bg-black/60 backdrop-blur text-[10px] text-slate-300 border border-slate-600 rounded px-1 py-0.5 outline-none hover:border-cyan-500 cursor-pointer"
+                >
+                    <option value="Original">Original</option>
+                    <option value="Grayscale">Grayscale</option>
+                </select>
+            </div>
+            <div className="absolute top-2 left-2 z-10 pointer-events-none">
+                 <span className="text-[10px] font-bold text-slate-500 bg-black/40 px-1 rounded flex items-center gap-1">
+                    <Eye size={10} /> SPATIAL
+                 </span>
+            </div>
 
-        {!data.hasImage && (
-          <div 
-            className="absolute inset-0 z-50 flex flex-col items-center justify-center text-slate-500 hover:text-cyan-400 transition-colors cursor-pointer"
-            onDoubleClick={handleUploadClick} // Use the new handler here too
-          >
-            <Upload size={32} className="mb-2 opacity-50" />
-            <span className="text-xs">DOUBLE CLICK OR USE BUTTON</span>
-          </div>
-        )}
-
-        {data.hasImage && (
-            <>
-                {!isFreqMode && (
-                      <img 
+            {/* Image Render */}
+            <div className="w-full h-full flex items-center justify-center p-2">
+                {data.hasImage ? (
+                     <img 
                         src={data.src} 
-                        className="w-full h-full object-contain pointer-events-none select-none p-1"
-                        style={viewSelection === 'Grayscale' ? { filter: 'grayscale(100%)' } : {}}
+                        className="w-full h-full object-contain"
+                        style={spatialMode === 'Grayscale' ? { filter: 'grayscale(100%)' } : {}}
                         alt={`Spatial ${id}`}
-                        onDoubleClick={handleUploadClick} // Double click still works
+                        onDoubleClick={handleUploadClick}
                       />
+                ) : (
+                    <div 
+                        className="flex flex-col items-center justify-center text-slate-600 hover:text-cyan-500 cursor-pointer transition-colors"
+                        onClick={handleUploadClick}
+                    >
+                        <Upload size={24} className="mb-1 opacity-50" />
+                        <span className="text-[10px]">NO DATA</span>
+                    </div>
                 )}
+            </div>
+        </div>
 
-                {isFreqMode && (
+        {/* 2. FREQUENCY DOMAIN (Bottom Half) */}
+        <div 
+            ref={freqContainerRef}
+            className={`flex-1 relative bg-black overflow-hidden ${processingMode === 'region' ? 'cursor-crosshair' : 'cursor-default'}`}
+            onMouseDown={handleMouseDown}
+        >
+             {/* Floating Controls */}
+             <div className="absolute top-2 right-2 z-10">
+                <select 
+                    value={freqMode}
+                    onChange={(e) => setFreqMode(e.target.value)}
+                    className="bg-black/60 backdrop-blur text-[10px] text-cyan-300 border border-slate-600 rounded px-1 py-0.5 outline-none hover:border-cyan-500 cursor-pointer"
+                >
+                    <option value="Magnitude">Magnitude</option>
+                    <option value="Phase">Phase</option>
+                    <option value="Real">Real</option>
+                    <option value="Imaginary">Imaginary</option>
+                </select>
+            </div>
+            <div className="absolute top-2 left-2 z-10 pointer-events-none">
+                 <span className="text-[10px] font-bold text-slate-500 bg-black/40 px-1 rounded flex items-center gap-1">
+                    <Activity size={10} /> FREQUENCY
+                 </span>
+            </div>
+
+            {/* Image Render */}
+            <div className="w-full h-full flex items-center justify-center p-2">
+                {data.hasImage ? (
                     <>
                         {!isBackendActive ? renderOfflineSpectrum() : (
                             ftImageUrl ? (
                                 <img 
                                     src={ftImageUrl} 
-                                    className="w-full h-full object-contain pointer-events-none select-none p-1"
+                                    className="w-full h-full object-contain pointer-events-none select-none"
                                     alt={`Freq ${id}`}
                                 />
                             ) : (
-                                <RefreshCw className="animate-spin text-slate-600" size={24} />
+                                <RefreshCw className="animate-spin text-slate-600" size={20} />
                             )
                         )}
 
+                        {/* Region Overlay (Only on Frequency View) */}
                         {processingMode === 'region' && (
                             <div 
                                 className={`absolute border pointer-events-none transition-all duration-75
@@ -197,16 +225,20 @@ const ImageViewport = ({
                                     width: `${regionSettings.width}%`, 
                                     height: `${regionSettings.height}%`,
                                     transform: 'translate(-50%, -50%)',
-                                    zIndex: 10
+                                    zIndex: 20
                                 }}
                             >
                                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-white/50 rounded-full" />
                             </div>
                         )}
                     </>
+                ) : (
+                    <div className="text-slate-700 text-[10px] font-mono">
+                        WAITING FOR INPUT...
+                    </div>
                 )}
-            </>
-        )}
+            </div>
+        </div>
       </div>
     </div>
   );
