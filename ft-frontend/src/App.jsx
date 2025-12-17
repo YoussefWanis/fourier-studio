@@ -123,7 +123,6 @@ const App = () => {
     }
 
     // Construct Payload
-    // Logic: If 'whole' mode, force region to be 100% Inner Pass covering center.
     const payload = {
         mix_mode: mixMode,
         mag_weights: {},
@@ -183,9 +182,10 @@ const App = () => {
 
   // --- RENDER ---
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-cyan-500/30 overflow-hidden flex flex-col">
+    // Changed min-h-screen to h-screen to strictly lock height
+    <div className="h-screen bg-slate-950 text-slate-200 font-sans selection:bg-cyan-500/30 overflow-hidden flex flex-col">
       {/* Navbar */}
-      <nav className="h-12 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md flex items-center px-4 justify-between z-50">
+      <nav className="h-12 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md flex items-center px-4 justify-between z-50 shrink-0">
         <div className="flex items-center gap-3">
           <div className="bg-gradient-to-tr from-cyan-500 to-purple-600 p-1.5 rounded-lg">
             <Layers size={18} className="text-white" />
@@ -203,11 +203,13 @@ const App = () => {
         </div>
       </nav>
 
-      {/* Main Content Grid */}
-      <main className="flex-1 p-3 grid grid-cols-12 gap-3 overflow-hidden h-[calc(100vh-3rem)]">
+      {/* Main Content Grid 
+          Added min-h-0 to children columns to allow them to shrink properly
+      */}
+      <main className="flex-1 p-2 grid grid-cols-12 gap-2 overflow-hidden h-[calc(100vh-3rem)]">
         
         {/* LEFT: INPUTS */}
-        <div className="col-span-12 lg:col-span-5 grid grid-cols-2 grid-rows-2 gap-2 h-full">
+        <div className="col-span-12 lg:col-span-5 grid grid-cols-2 grid-rows-2 gap-2 h-full min-h-0">
           {images.map((img) => (
             <ImageViewport 
               key={img.id}
@@ -224,7 +226,7 @@ const App = () => {
         </div>
 
         {/* CENTER: CONTROLS */}
-        <div className="col-span-12 lg:col-span-3 h-full">
+        <div className="col-span-12 lg:col-span-3 h-full min-h-0">
           <MixerControls 
             weights={weights} setWeights={setWeights}
             regionSettings={regionSettings} setRegionSettings={setRegionSettings}
@@ -236,8 +238,8 @@ const App = () => {
         </div>
 
         {/* RIGHT: OUTPUTS */}
-        <div className="col-span-12 lg:col-span-4 flex flex-col gap-2 h-full">
-          <div className="flex-1">
+        <div className="col-span-12 lg:col-span-4 flex flex-col gap-2 h-full min-h-0">
+          <div className="flex-1 min-h-0">
             <OutputViewport 
               id={1} 
               isActive={activeOutput === 1} 
@@ -246,7 +248,7 @@ const App = () => {
               isProcessing={isProcessing}
             />
           </div>
-          <div className="flex-1">
+          <div className="flex-1 min-h-0">
             <OutputViewport 
               id={2} 
               isActive={activeOutput === 2} 
@@ -258,9 +260,7 @@ const App = () => {
         </div>
       </main>
 
-      {/* Note: In a real multi-file app, move these styles to App.css or index.css.
-         I am keeping them here for compatibility if you copy-paste directly.
-      */}
+      {/* Inline Styles */}
       <style>{`
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
