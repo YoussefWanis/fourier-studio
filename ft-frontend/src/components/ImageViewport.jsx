@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ImageIcon, ChevronDown, Upload, RefreshCw } from 'lucide-react';
+import { ImageIcon, ChevronDown, Upload, RefreshCw } from 'lucide-react'; // Ensure Upload is imported
 import { API_URL } from '../config';
 
 const ImageViewport = ({ 
@@ -19,6 +19,13 @@ const ImageViewport = ({
   const containerRef = useRef(null);
 
   const isFreqMode = !['Original', 'Grayscale'].includes(viewSelection);
+
+  // --- TRIGGER UPLOAD ---
+  const handleUploadClick = () => {
+    if (fileInputRef.current) {
+        fileInputRef.current.click();
+    }
+  };
 
   const fetchView = useCallback(async () => {
     if (!data.hasImage || !isBackendActive || !isFreqMode) return;
@@ -89,35 +96,52 @@ const ImageViewport = ({
 
   return (
     <div className="bg-slate-800 rounded-xl overflow-hidden border border-slate-700 shadow-xl flex flex-col h-full group hover:border-cyan-500/50 transition-colors">
+      
+      {/* --- HEADER --- */}
       <div className="bg-slate-900/80 p-2 flex items-center justify-between text-xs font-mono border-b border-slate-700">
         <span className="text-cyan-400 flex items-center gap-2">
           <ImageIcon size={14} /> IMG_0{id}
         </span>
         
-        <div className="relative group/sel">
-           <select 
-             value={viewSelection}
-             onChange={(e) => setViewSelection(e.target.value)}
-             className="bg-slate-950 text-xs text-slate-300 border border-slate-700 rounded px-2 py-1 pr-6 outline-none hover:border-cyan-500 hover:text-cyan-400 transition-colors appearance-none cursor-pointer"
-           >
-             <option value="Original">Original (Color)</option>
-             <option value="Grayscale">Grayscale Input</option>
-             <option disabled>──────────</option>
-             <option value="Magnitude">FT Magnitude</option>
-             <option value="Phase">FT Phase</option>
-             <option value="Real">FT Real</option>
-             <option value="Imaginary">FT Imaginary</option>
-           </select>
-           <ChevronDown size={12} className="absolute right-2 top-1.5 text-slate-500 pointer-events-none" />
+        {/* Right Side: Upload Button + Dropdown */}
+        <div className="flex items-center gap-2">
+            
+            {/* NEW UPLOAD BUTTON */}
+            <button 
+                onClick={handleUploadClick}
+                className="bg-slate-800 hover:bg-cyan-600 text-slate-400 hover:text-white p-1 rounded border border-slate-700 transition-colors"
+                title="Upload / Change Image"
+            >
+                <Upload size={14} />
+            </button>
+
+            <div className="relative group/sel">
+                <select 
+                    value={viewSelection}
+                    onChange={(e) => setViewSelection(e.target.value)}
+                    className="bg-slate-950 text-xs text-slate-300 border border-slate-700 rounded px-2 py-1 pr-6 outline-none hover:border-cyan-500 hover:text-cyan-400 transition-colors appearance-none cursor-pointer"
+                >
+                    <option value="Original">Original (Color)</option>
+                    <option value="Grayscale">Grayscale Input</option>
+                    <option disabled>──────────</option>
+                    <option value="Magnitude">FT Magnitude</option>
+                    <option value="Phase">FT Phase</option>
+                    <option value="Real">FT Real</option>
+                    <option value="Imaginary">FT Imaginary</option>
+                </select>
+                <ChevronDown size={12} className="absolute right-2 top-1.5 text-slate-500 pointer-events-none" />
+            </div>
         </div>
       </div>
 
+      {/* --- CONTENT --- */}
       <div 
         ref={containerRef}
         className={`relative flex-1 bg-black overflow-hidden flex items-center justify-center ${isFreqMode && processingMode === 'region' ? 'cursor-crosshair' : 'cursor-default'}`}
         onMouseDown={handleMouseDown}
       >
         
+        {/* Hidden File Input */}
         <input 
           type="file" 
           ref={fileInputRef} 
@@ -129,10 +153,10 @@ const ImageViewport = ({
         {!data.hasImage && (
           <div 
             className="absolute inset-0 z-50 flex flex-col items-center justify-center text-slate-500 hover:text-cyan-400 transition-colors cursor-pointer"
-            onDoubleClick={() => fileInputRef.current.click()}
+            onDoubleClick={handleUploadClick} // Use the new handler here too
           >
             <Upload size={32} className="mb-2 opacity-50" />
-            <span className="text-xs">DOUBLE CLICK TO BROWSE</span>
+            <span className="text-xs">DOUBLE CLICK OR USE BUTTON</span>
           </div>
         )}
 
@@ -144,7 +168,7 @@ const ImageViewport = ({
                         className="w-full h-full object-contain pointer-events-none select-none p-1"
                         style={viewSelection === 'Grayscale' ? { filter: 'grayscale(100%)' } : {}}
                         alt={`Spatial ${id}`}
-                        onDoubleClick={() => fileInputRef.current.click()} 
+                        onDoubleClick={handleUploadClick} // Double click still works
                       />
                 )}
 
