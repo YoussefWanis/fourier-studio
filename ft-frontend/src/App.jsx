@@ -41,16 +41,10 @@ const App = () => {
   const updateRegionPosition = (id, x, y) => {
     if (isLinked) {
       setRegionPositions({
-        1: { x, y },
-        2: { x, y },
-        3: { x, y },
-        4: { x, y },
+        1: { x, y }, 2: { x, y }, 3: { x, y }, 4: { x, y },
       });
     } else {
-      setRegionPositions(prev => ({
-          ...prev,
-          [id]: { x, y }
-      }));
+      setRegionPositions(prev => ({ ...prev, [id]: { x, y } }));
     }
   };
 
@@ -106,8 +100,8 @@ const App = () => {
   };
 
   const handleProcess = useCallback(async () => {
-    setIsProcessing(true);
     if (pollingRef.current) clearInterval(pollingRef.current);
+    setIsProcessing(true);
 
     // If backend is dead, simulate mixing locally
     if (!isBackendActive) {
@@ -125,10 +119,7 @@ const App = () => {
     // Construct Payload
     const payload = {
         mix_mode: mixMode,
-        mag_weights: {},
-        phase_weights: {},
-        real_weights: {},
-        imag_weights: {},
+        mag_weights: {}, phase_weights: {}, real_weights: {}, imag_weights: {},
         region: processingMode === 'whole' 
             ? { width: 100, height: 100, type: 'inner', x: 50, y: 50 } 
             : {
@@ -182,7 +173,6 @@ const App = () => {
 
   // --- RENDER ---
   return (
-    // Changed min-h-screen to h-screen to strictly lock height
     <div className="h-screen bg-slate-950 text-slate-200 font-sans selection:bg-cyan-500/30 overflow-hidden flex flex-col">
       {/* Navbar */}
       <nav className="h-12 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md flex items-center px-4 justify-between z-50 shrink-0">
@@ -203,11 +193,7 @@ const App = () => {
         </div>
       </nav>
 
-      {/* Main Content Grid 
-          Added min-h-0 to children columns to allow them to shrink properly
-      */}
       <main className="flex-1 p-2 grid grid-cols-12 gap-2 overflow-hidden h-[calc(100vh-3rem)]">
-        
         {/* LEFT: INPUTS */}
         <div className="col-span-12 lg:col-span-5 grid grid-cols-2 grid-rows-2 gap-2 h-full min-h-0">
           {images.map((img) => (
@@ -260,7 +246,6 @@ const App = () => {
         </div>
       </main>
 
-      {/* Inline Styles */}
       <style>{`
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
